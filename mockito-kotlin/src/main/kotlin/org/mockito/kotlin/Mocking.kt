@@ -32,7 +32,48 @@ import org.mockito.listeners.InvocationListener
 import org.mockito.mock.SerializableMode
 import org.mockito.stubbing.Answer
 import kotlin.DeprecationLevel.ERROR
+import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
+
+inline fun <R, reified T : Any> mock(
+    extraInterfaces: Array<out KClass<out Any>>? = null,
+    spiedInstance: Any? = null,
+    defaultAnswer: Answer<Any>? = null,
+    serializable: Boolean = false,
+    serializableMode: SerializableMode? = null,
+    verboseLogging: Boolean = false,
+    invocationListeners: Array<InvocationListener>? = null,
+    stubOnly: Boolean = false,
+    @Incubating useConstructor: UseConstructor? = null,
+    @Incubating outerInstance: Any? = null,
+    @Incubating lenient: Boolean = false,
+    crossinline stubbing: KStubbing<T>.(T) -> Unit = {}
+) = object : ReadOnlyProperty<R, T> {
+    private lateinit var mock: T
+    override fun getValue(thisRef: R, property: KProperty<*>): T {
+        if (!::mock.isInitialized) {
+            mock = Mockito.mock(
+                  T::class.java,
+                  withSettings(
+                        extraInterfaces = extraInterfaces,
+                        name = property.name,
+                        spiedInstance = spiedInstance,
+                        defaultAnswer = defaultAnswer,
+                        serializable = serializable,
+                        serializableMode = serializableMode,
+                        verboseLogging = verboseLogging,
+                        invocationListeners = invocationListeners,
+                        stubOnly = stubOnly,
+                        useConstructor = useConstructor,
+                        outerInstance = outerInstance,
+                        lenient = lenient
+                  )
+            ).apply { KStubbing(this).stubbing(this) }!!
+        }
+        return mock
+    }
+}
 
 /**
  * Creates a mock for [T].
